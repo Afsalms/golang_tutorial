@@ -9,10 +9,10 @@ import (
     "io"
     "log"
     "os"
-    "io/ioutil"
+    // "io/ioutil"
     "net/http"
-    "strings"
-    "path/filepath"
+    // "strings"
+    // "path/filepath"
     "time"
     "sync"
 )
@@ -47,25 +47,26 @@ func main() {
 
 
 func getWebPage(url string ,waitgroup *sync.WaitGroup){
-    response, err := http.Get(url)
+    _, err := http.Get(url)
     if err != nil {
         fmt.Printf("The HTTP request failed with error %s\n", err)
-    } else {
-        data, _ := ioutil.ReadAll(response.Body)
-        urlCompoents := strings.Split(url, "/")
-        newpath := filepath.Join(".", "htmls")
-        os.MkdirAll(newpath, os.ModePerm)
-        fileName := "htmls/" + urlCompoents[len(urlCompoents)-1] + ".html"
-        f, err := os.Create(fileName)
-        if err != nil {
-            fmt.Println(err)
-            return
-        }
-        _, err1 := f.WriteString(string(data))
-        if err1 != nil {
-            f.Close()
-            return
-        }
+    // } else {
+    //     data, _ := ioutil.ReadAll(response.Body)
+        // fmt.Println(data)
+        // urlCompoents := strings.Split(url, "/")
+        // newpath := filepath.Join(".", "htmls")
+        // os.MkdirAll(newpath, os.ModePerm)
+        // fileName := "htmls/" + urlCompoents[len(urlCompoents)-1] + ".html"
+        // f, err := os.Create(fileName)
+        // if err != nil {
+            // fmt.Println(err)
+            // return
+        // }
+        // _, err1 := f.WriteString(string(data))
+        // if err1 != nil {
+            // f.Close()
+            // return
+        // }
     }
     waitgroup.Done()
 
