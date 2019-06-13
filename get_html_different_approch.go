@@ -9,17 +9,27 @@ import (
     "io"
     "log"
     "os"
-    // "io/ioutil"
+    "io/ioutil"
     "net/http"
-    // "strings"
-    // "path/filepath"
+    "strings"
+    "path/filepath"
     "time"
-    "sync"
+    // "sync"
 )
 
+type fileDetails struct{
+    fileName string
+    content string
+}
+
 func main() {
-    var waitgroup sync.WaitGroup
+    
+    fmt.Println("Started")
     start := time.Now()
+    
+    urlChannel := make(chan string, 100)
+    fileDetailsChannel := make(chan fileDetails, 100)
+
     csvFile, err := os.Open("urls.csv")
     if err != nil {
         os.Exit(3)
@@ -36,38 +46,52 @@ func main() {
         urls = append(urls, line[0])
     }
 
-    waitgroup.Add(len(urls))
     for _, url := range(urls){
-        go getWebPage(url, &waitgroup)
+        urlChannel <- url
+
     }
-    waitgroup.Wait()
+    close(urlChannel)
+    go getWebPage(urlChannel, fileDetailsChannel)
+    go writeFile(fileDetailsChannel)
     elapsed := time.Since(start)
-    log.Printf("Binomial took %s", elapsed)
+    log.Printf("Action took %s", elapsed)
+    fmt.Scanln()
 }
 
 
-func getWebPage(url string ,waitgroup *sync.WaitGroup){
-    _, err := http.Get(url)
-    if err != nil {
-        fmt.Printf("The HTTP request failed with error %s\n", err)
-    // } else {
-    //     data, _ := ioutil.ReadAll(response.Body)
-        // fmt.Println(data)
-        // urlCompoents := strings.Split(url, "/")
-        // newpath := filepath.Join(".", "htmls")
-        // os.MkdirAll(newpath, os.ModePerm)
-        // fileName := "htmls/" + urlCompoents[len(urlCompoents)-1] + ".html"
-        // f, err := os.Create(fileName)
-        // if err != nil {
-            // fmt.Println(err)
-            // return
-        // }
-        // _, err1 := f.WriteString(string(data))
-        // if err1 != nil {
-            // f.Close()
-            // return
-        // }
+func getWebPage(urlChannel chan string, fileDetailsChannel chan fileDetails){
+    for url := range urlChannel{
+        fmt.Println(url)
+        response, err := http.Get(url)
+        if err != nil {
+            fmt.Printf("The HTTP request failed with error %s\n", err)
+        }else {
+            data, _ := ioutil.ReadAll(response.Body)
+            urlCompoents := strings.Split(url, "/")
+            fileName := "htmls/" + urlCompoents[len(urlCompoents)-1] + ".html"
+            fileDetailsChannel <- fileDetails{fileName: fileName, content: string(data)}
+        }
     }
-    waitgroup.Done()
-
+    close(fileDetailsChannel)
 }
+
+func writeFile(fileDetailsChannel chan fileDetails){
+    newpath := filepath.Join(".", "htmls")
+    os.MkdirAll(newpath, os.ModePerm)
+    for fileDetail := range(fileDetailsChannel){
+        fileName := fileDetail.fileName
+        data := fileDetail.content
+        f, err := os.Create(fileName)
+        if err != nil {
+            fmt.Println(err)
+            continue
+        }
+        _, err1 := f.WriteString(data)
+        if err1 != nil {
+            f.Close()
+            continue
+        }
+    }
+}
+
+
